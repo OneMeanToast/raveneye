@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raveneye"
+version = "0.1.0"
+description = "Multi-constellation EO tasking simulation for evaluating satellite-tasking allocation mechanisms."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "RavenEye contributors" }]
+keywords = ["simulation", "satellite", "tasking", "EO", "allocation", "mechanism-design"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+raveneye-generate = "raveneye.cli.generate:main"
+
+[project.urls]
+Homepage = "https://github.com/OneMeanToast/raveneye"
+Issues = "https://github.com/OneMeanToast/raveneye/issues"
+
+[tool.setuptools]
+packages = [
+    "raveneye",
+    "raveneye.cli",
+    "raveneye.sim",
+    "raveneye.viewer",
+]
+
+[tool.setuptools.package-data]
+"raveneye.viewer" = ["template.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

@@ -36,6 +36,7 @@ dev = [
 
 [project.scripts]
 raveneye-generate = "raveneye.cli.generate:main"
+raveneye-build-scenario = "raveneye.cli.build_scenario:main"
 
 [project.urls]
 Homepage = "https://github.com/OneMeanToast/raveneye"
@@ -48,6 +49,7 @@ packages = [
     "raveneye.sim",
     "raveneye.orbital",
     "raveneye.mechanism",
+    "raveneye.scenario",
     "raveneye.viewer",
 ]
 

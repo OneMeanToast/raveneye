@@ -7,16 +7,23 @@ future work doesn't have to re-derive the same observations.
 When you pick one of these up, file it as a GitHub issue and remove the
 corresponding line from this file.
 
-## v0.2 candidates (already in `raveneyebuildspec.md` §5)
+## v0.2 candidates (now shipped in v0.2 / v0.2.1)
 
-- [ ] Supply layer (`raveneye/orbital/`) — TLE/OMM ingest, SGP4, access
-      windows, quality scoring.
-- [ ] Mechanism layer (`raveneye/mechanism/`) — `GreedyPriorityMechanism`
-      and `SequentialSingleItemMechanism`.
-- [ ] CesiumJS globe viewer (`raveneye/viewer/globe/`).
+- [x] Supply layer (`raveneye/orbital/`) — TLE/OMM ingest, SGP4, access
+      windows, quality scoring. **Shipped in v0.2.**
+- [x] Mechanism layer (`raveneye/mechanism/`) — `GreedyPriorityMechanism`
+      and `SequentialSingleItemMechanism`. **Shipped in v0.2.**
+- [x] CesiumJS globe viewer (`raveneye/viewer/globe/`). **Shipped in v0.2.**
+- [x] Multi-constellation offline TLE fixture + `--tle-fixture-dir` CLI.
+      **Shipped in v0.2.1.**
+- [x] Image-delivery pipeline (`raveneye/delivery/`) — lifecycle states,
+      per-vendor latencies, quality-modulated success. **Shipped in v0.2.1.**
+- [x] RTB / architecture explainer drawer in the viewer. **Shipped in v0.2.1.**
+- [x] BOARD tab — per-target Gantt + Kanban tasking flow.
+      **Shipped in v0.2.1.**
 - [ ] Python ↔ JavaScript SGP4 position-agreement check (≤ 1 km).
-
-These are tracked in the buildspec and don't need separate issues.
+      Reference table generation lives in `scripts/verify_position_agreement.py`;
+      JS-side comparator + `?agreement=1` URL flag still TODO.
 
 ## v0.3+ — evaluation layer
 

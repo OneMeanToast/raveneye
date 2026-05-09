@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "raveneye"
-version = "0.2.0"
+version = "0.2.1"
 description = "Multi-constellation EO tasking simulation for evaluating satellite-tasking allocation mechanisms."
 readme = "README.md"
 license = { text = "MIT" }

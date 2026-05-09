@@ -25,10 +25,24 @@
   // ----- Cesium viewer factory -----
   function makeViewer() {
     const Cesium = global.Cesium;
-    // The Cesium ion default token issues 401s on commercial usage; we
-    // explicitly opt into OSM imagery + the bundled ellipsoid terrain so
-    // the viewer never depends on a paid Cesium account.
+    // We don't ship a Cesium ion token (the default is for non-commercial
+    // sample use only and produces 401s on most deployments). Clearing it
+    // means we MUST supply an explicit base imagery layer, otherwise the
+    // viewer renders a blank blue marble — Cesium's silent fallback when
+    // its default Cesium World Imagery provider can't authenticate.
     Cesium.Ion.defaultAccessToken = "";
+
+    // OSM tiles via UrlTemplateImageryProvider — the only synchronous
+    // imagery constructor still supported across Cesium 1.107+. The newer
+    // `OpenStreetMapImageryProvider.fromUrl()` returns a Promise and won't
+    // work as a synchronous `baseLayer:` argument.
+    const baseLayer = new Cesium.ImageryLayer(
+      new Cesium.UrlTemplateImageryProvider({
+        url: "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        credit: "© OpenStreetMap contributors",
+        maximumLevel: 19,
+      })
+    );
 
     const viewer = new Cesium.Viewer("cesiumContainer", {
       animation: false,
@@ -44,9 +58,7 @@
       selectionIndicator: false,
       infoBox: false,
       shouldAnimate: false,
-      imageryProvider: new Cesium.OpenStreetMapImageryProvider({
-        url: "https://tile.openstreetmap.org/",
-      }),
+      baseLayer: baseLayer,
       terrainProvider: new Cesium.EllipsoidTerrainProvider(),
       requestRenderMode: false,
     });

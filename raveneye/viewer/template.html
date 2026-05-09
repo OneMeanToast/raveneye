@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RavenEye — Watch Floor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090d;
+      --panel: #0e131a;
+      --panel-2: #131a23;
+      --border: #1d2731;
+      --text: #c8d3e0;
+      --text-dim: #8693a3;
+      --muted: #5a6675;
+      --accent: #4cc4d8;
+      --amber: #f0a020;
+      --orange: #e07b3c;
+      --red: #e55a3c;
+      --green: #5fb87a;
+      --violet: #9d7cd8;
+      --sev1: #4cc4d8;
+      --sev2: #5fb87a;
+      --sev3: #f0a020;
+      --sev4: #e07b3c;
+      --sev5: #e55a3c;
+      --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+    #app {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      grid-template-rows: 48px 1fr 180px 40px;
+      grid-template-areas:
+        "header header"
+        "map    aside"
+        "timeline timeline"
+        "footer footer";
+      height: 100vh;
+      width: 100vw;
+    }
+    header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .brand {
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+    .brand .dot { color: var(--red); margin-right: 6px; }
+    .scenario {
+      font-size: 12px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .phase-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--amber);
+    }
+    .clock {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      min-width: 220px;
+      text-align: right;
+    }
+    .clock .t-rel {
+      color: var(--text-dim);
+      margin-left: 10px;
+    }
+
+    main {
+      grid-area: map;
+      position: relative;
+      background: #050709;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+    #map { width: 100%; height: 100%; display: block; }
+    .grid-line { stroke: #11181f; stroke-width: 0.01; fill: none; }
+    .water { fill: #06090c; }
+    .land {
+      fill: #0d141c;
+      stroke: #1c2731;
+      stroke-width: 0.015;
+      stroke-linejoin: round;
+    }
+    .country-label {
+      font-family: var(--mono);
+      font-size: 0.18px;
+      font-weight: 500;
+      fill: #2c3a4a;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+    .grid-label {
+      font-family: var(--mono);
+      font-size: 0.10px;
+      fill: #1f2a35;
+      pointer-events: none;
+    }
+    .loc-marker {
+      fill: #1d2731;
+      stroke: #3a4856;
+      stroke-width: 0.012;
+      cursor: default;
+    }
+    .loc-marker.kind-MILITARY_BASE { stroke: #6e7c8c; }
+    .loc-marker.kind-REFINERY      { stroke: #a07242; }
+    .loc-marker.kind-PORT_FACILITY { stroke: #4c8aa0; }
+    .loc-marker.kind-WIDE_AREA     { stroke: #4c5666; }
+    .loc-marker.kind-AIRFIELD      { stroke: #8a8a4c; }
+    .loc-label {
+      font-family: var(--mono);
+      font-size: 0.085px;
+      fill: var(--muted);
+      letter-spacing: 0.02em;
+      pointer-events: none;
+    }
+
+    .event-dot {
+      cursor: pointer;
+    }
+    .event-dot .ring {
+      fill: none;
+      stroke-width: 0.025;
+    }
+    .event-dot .core {
+      stroke: rgba(0,0,0,0.6);
+      stroke-width: 0.01;
+    }
+    .event-dot.scripted .core { stroke: #ffffff; stroke-width: 0.015; }
+    .event-dot.selected .ring-outer {
+      stroke: #ffffff;
+      stroke-dasharray: 0.06 0.06;
+    }
+    .sev-1 { fill: var(--sev1); stroke: var(--sev1); }
+    .sev-2 { fill: var(--sev2); stroke: var(--sev2); }
+    .sev-3 { fill: var(--sev3); stroke: var(--sev3); }
+    .sev-4 { fill: var(--sev4); stroke: var(--sev4); }
+    .sev-5 { fill: var(--sev5); stroke: var(--sev5); }
+
+    aside {
+      grid-area: aside;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      min-height: 0;
+    }
+    .panel-head {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 10px 14px 6px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel-head .count {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    #bid-panel {
+      border-bottom: 1px solid var(--border);
+      max-height: 50%;
+      display: flex;
+      flex-direction: column;
+      min-height: 180px;
+    }
+    #bid-panel .bid-body {
+      padding: 8px 10px 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .bid-empty {
+      padding: 24px 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .selected-event {
+      padding: 10px 14px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-2);
+    }
+    .selected-event .se-id {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+    }
+    .selected-event .se-type {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      letter-spacing: 0.06em;
+      margin-left: 8px;
+    }
+    .selected-event .se-narr {
+      margin-top: 6px;
+      color: var(--text);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+    .selected-event .se-meta {
+      margin-top: 6px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+    .bid-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px 12px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      margin-bottom: 6px;
+    }
+    .bid-row .bid-stake {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+    .bid-row .bid-score {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--amber);
+      text-align: right;
+    }
+    .bid-row .bid-rationale {
+      grid-column: 1 / -1;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      line-height: 1.45;
+    }
+
+    #event-feed {
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .feed-row {
+      display: grid;
+      grid-template-columns: 50px 22px 1fr;
+      gap: 0 10px;
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      align-items: start;
+    }
+    .feed-row:hover { background: var(--panel-2); }
+    .feed-row.selected { background: #182231; }
+    .feed-row.future { opacity: 0.32; }
+    .feed-row .feed-t {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+    .feed-row .feed-sev {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .feed-row .feed-text { line-height: 1.4; }
+    .feed-row .feed-type {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text);
+      letter-spacing: 0.06em;
+    }
+    .feed-row.scripted .feed-type { color: var(--accent); }
+    .feed-row .feed-narr {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 1px;
+    }
+    .feed-row .feed-loc {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      margin-top: 2px;
+    }
+
+    #timeline {
+      grid-area: timeline;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    #timeline svg { width: 100%; height: 100%; display: block; }
+    .phase-band {
+      stroke: none;
+      opacity: 0.32;
+    }
+    .phase-label {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      fill: var(--text);
+      text-transform: uppercase;
+    }
+    .phase-mult {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      fill: var(--text-dim);
+    }
+    .tick-hour {
+      stroke: #1a232c;
+      stroke-width: 1;
+    }
+    .tick-day {
+      stroke: #2a3a4a;
+      stroke-width: 1;
+    }
+    .tick-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      fill: var(--text-dim);
+    }
+    .ev-tick { stroke-width: 1.4; opacity: 0.85; cursor: pointer; }
+    .ev-tick.scripted { stroke-width: 2; }
+    .ev-tick.future { opacity: 0.28; }
+    .playhead {
+      stroke: var(--accent);
+      stroke-width: 1.5;
+      filter: drop-shadow(0 0 4px rgba(76, 196, 216, 0.6));
+    }
+    .playhead-handle {
+      fill: var(--accent);
+    }
+
+    footer {
+      grid-area: footer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 16px;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+    }
+    footer button {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+    footer button:hover { background: var(--panel-2); }
+    footer button.active { background: #1a2734; color: var(--accent); border-color: #2a4050; }
+    footer .speeds { display: flex; gap: 4px; }
+    footer .hint {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+    footer .hint kbd {
+      font-family: var(--mono);
+      font-size: 10px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      margin: 0 2px;
+      color: var(--text-dim);
+    }
+
+    #error-box {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 9, 13, 0.96);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 32px;
+    }
+    #error-box .ebody {
+      max-width: 560px;
+      border: 1px solid var(--red);
+      background: var(--panel);
+      padding: 20px 24px;
+    }
+    #error-box h2 {
+      margin: 0 0 8px;
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--red);
+    }
+    #error-box p { margin: 6px 0; line-height: 1.5; color: var(--text); font-size: 13px; }
+    #error-box code {
+      font-family: var(--mono);
+      background: var(--panel-2);
+      padding: 1px 6px;
+      color: var(--accent);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand"><span class="dot">&#9679;</span>RAVENEYE</div>
+      <div class="scenario" id="scenario-name">&mdash;</div>
+      <div class="phase-badge" id="phase-badge">&mdash;</div>
+      <div class="clock" id="clock">&mdash;</div>
+    </header>
+
+    <main>
+      <svg id="map" preserveAspectRatio="xMidYMid meet" viewBox="48.5 24.5 10.5 6">
+        <defs>
+          <pattern id="seapattern" width="0.4" height="0.4" patternUnits="userSpaceOnUse">
+            <rect width="0.4" height="0.4" fill="#06090c"/>
+            <circle cx="0.2" cy="0.2" r="0.005" fill="#0c1419"/>
+          </pattern>
+        </defs>
+        <rect class="water" x="48.5" y="24.5" width="10.5" height="6" fill="url(#seapattern)"/>
+        <g id="grid"></g>
+        <g id="land"></g>
+        <g id="country-labels"></g>
+        <g id="locations"></g>
+        <g id="events"></g>
+      </svg>
+    </main>
+
+    <aside>
+      <section id="bid-panel">
+        <div class="panel-head">
+          <span>Selected Event &mdash; Derived Bids</span>
+          <span class="count" id="bid-count"></span>
+        </div>
+        <div class="bid-body" id="bid-body">
+          <div class="bid-empty">Click an event on the map or in the feed to inspect its derived stakeholder bids.</div>
+        </div>
+      </section>
+      <section id="event-feed-section" style="display:flex; flex-direction:column; min-height:0;">
+        <div class="panel-head">
+          <span>Event Feed</span>
+          <span class="count" id="feed-count"></span>
+        </div>
+        <div id="event-feed"></div>
+      </section>
+    </aside>
+
+    <div id="timeline">
+      <svg id="timeline-svg" preserveAspectRatio="none"></svg>
+    </div>
+
+    <footer>
+      <button id="btn-play" title="Play / Pause (Space)">&#9658; PLAY</button>
+      <button id="btn-reset" title="Reset (R)">&#9632; RESET</button>
+      <div class="speeds" id="speeds">
+        <button data-speed="1">1&times;</button>
+        <button data-speed="5">5&times;</button>
+        <button data-speed="15">15&times;</button>
+        <button data-speed="60" class="active">60&times;</button>
+      </div>
+      <div class="hint">
+        <kbd>Space</kbd> play &nbsp; <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> &plusmn;2h &nbsp; <kbd>R</kbd> reset
+      </div>
+    </footer>
+  </div>
+
+  <div id="error-box" class="hidden">
+    <div class="ebody">
+      <h2>Could not load sim.json</h2>
+      <p id="err-detail"></p>
+      <p>The viewer is a static HTML file but loads <code>sim.json</code> via <code>fetch()</code>, which most browsers block when opened directly from disk. Serve the directory:</p>
+      <p><code>python3 -m http.server</code></p>
+      <p>then open <code>http://localhost:8000/</code>.</p>
+      <p>You can also override the URL with <code>?sim=path/to/sim.json</code> or <code>window.RAVENEYE_SIM_URL</code>.</p>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    "use strict";
+
+    // ---------- Config ----------
+    var BOUNDS = { latMin: 24.5, latMax: 30.5, lonMin: 48.5, lonMax: 59.0 };
+    var EVENT_TYPE_GLYPH = {
+      KINETIC_STRIKE: "K", MINE_LAYING_REPORT: "M", NAVAL_POSTURE_CHANGE: "N",
+      MOVEMENT_DETECTED: "V", VESSEL_DARK: "D", BLOCKADE_RUNNER: "R",
+      HUMINT_REPORT: "H", SIGINT_CUE: "S", WEATHER_DEGRADATION: "W",
+      DIPLOMATIC_STATUS_CHANGE: "P", FACILITY_ANOMALY: "F"
+    };
+    var PHASE_COLOR = {
+      BLOCKADE_ACTIVE:        "#2a4a6e",
+      ESCALATION:             "#a05c2a",
+      CEASEFIRE_ANNOUNCED:    "#2a6e4a",
+      CEASEFIRE_COLLAPSE:     "#a02e2a",
+      BLOCKADE_REINFORCED:    "#5c3a8e"
+    };
+
+    // Stylized coastline polygons. Coordinates are (lon, lat) pairs that
+    // approximate the Persian Gulf / Strait of Hormuz region. They are
+    // intentionally rough — this is a demo, not geodesy.
+    var COASTLINES = {
+      iran: [
+        [48.50, 30.50], [59.00, 30.50], [59.00, 28.10], [57.90, 27.20],
+        [56.90, 26.60], [56.50, 26.55], [56.20, 26.85], [55.80, 26.85],
+        [54.90, 27.30], [54.20, 27.55], [53.20, 27.90], [51.90, 28.85],
+        [50.90, 29.45], [50.10, 29.95], [49.20, 30.30], [48.50, 30.50]
+      ],
+      arabia_uae_oman: [
+        [48.50, 24.50], [59.00, 24.50], [59.00, 25.40], [57.20, 25.55],
+        [56.55, 26.45], [56.15, 26.40], [55.55, 25.60], [54.30, 24.95],
+        [53.20, 24.55], [51.65, 24.58], [51.55, 26.20], [50.85, 26.25],
+        [50.40, 25.50], [50.05, 25.10], [49.70, 24.80], [48.50, 24.50]
+      ],
+      qatar: [
+        [50.85, 26.20], [51.60, 26.15], [51.65, 25.05], [51.20, 24.65],
+        [50.90, 25.10], [50.85, 26.20]
+      ],
+      bahrain: [
+        [50.45, 26.30], [50.65, 26.30], [50.70, 25.85], [50.50, 25.80],
+        [50.45, 26.30]
+      ]
+    };
+
+    var COUNTRY_LABELS = [
+      { name: "IRAN",         lat: 29.40, lon: 53.50 },
+      { name: "SAUDI ARABIA", lat: 25.30, lon: 49.30 },
+      { name: "QATAR",        lat: 25.40, lon: 51.20 },
+      { name: "U.A.E.",       lat: 24.85, lon: 54.50 },
+      { name: "OMAN",         lat: 24.85, lon: 56.80 },
+      { name: "BAHRAIN",      lat: 26.05, lon: 50.55 }
+    ];
+
+    // ---------- Geometry ----------
+    function projY(lat) { return BOUNDS.latMax + BOUNDS.latMin - lat; }
+    function projX(lon) { return lon; }
+
+    // ---------- State ----------
+    var sim = null;
+    var simT = 0;          // sim time in hours
+    var playing = false;
+    var speed = 60;
+    var lastFrame = 0;
+    var selectedEventId = null;
+    var bidsByEvent = {};
+    var stakeholdersById = {};
+
+    // ---------- Boot ----------
+    function urlParam(name) {
+      var p = new URLSearchParams(window.location.search);
+      return p.get(name);
+    }
+    function simUrl() {
+      return urlParam("sim") || window.RAVENEYE_SIM_URL || "sim.json";
+    }
+    function showError(detail) {
+      document.getElementById("err-detail").textContent = detail;
+      document.getElementById("error-box").classList.remove("hidden");
+    }
+    fetch(simUrl())
+      .then(function(r) {
+        if (!r.ok) throw new Error("HTTP " + r.status + " for " + simUrl());
+        return r.json();
+      })
+      .then(function(data) {
+        sim = data;
+        indexData();
+        renderMapStatic();
+        renderTimelineStatic();
+        renderFeed();
+        renderEventDots();
+        updateClock();
+        wireControls();
+        startLoop();
+      })
+      .catch(function(err) {
+        showError(String(err));
+      });
+
+    function indexData() {
+      bidsByEvent = {};
+      (sim.bids || []).forEach(function(b) {
+        if (!bidsByEvent[b.event_id]) bidsByEvent[b.event_id] = [];
+        bidsByEvent[b.event_id].push(b);
+      });
+      Object.keys(bidsByEvent).forEach(function(k) {
+        bidsByEvent[k].sort(function(a, b) { return b.priority_score - a.priority_score; });
+      });
+      stakeholdersById = {};
+      (sim.stakeholders || []).forEach(function(s) {
+        stakeholdersById[s.stakeholder_id] = s;
+      });
+      // chronological just to be safe
+      sim.events.sort(function(a, b) { return a.t_hours - b.t_hours; });
+    }
+
+    // ---------- SVG helpers ----------
+    function svgEl(tag, attrs, parent) {
+      var el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      if (attrs) {
+        for (var k in attrs) {
+          if (attrs.hasOwnProperty(k)) el.setAttribute(k, attrs[k]);
+        }
+      }
+      if (parent) parent.appendChild(el);
+      return el;
+    }
+    function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+    // ---------- Static map render ----------
+    function renderMapStatic() {
+      // 1° grid
+      var g = document.getElementById("grid");
+      clear(g);
+      for (var lat = Math.ceil(BOUNDS.latMin); lat <= BOUNDS.latMax; lat++) {
+        svgEl("line", {
+          x1: BOUNDS.lonMin, y1: projY(lat),
+          x2: BOUNDS.lonMax, y2: projY(lat),
+          "class": "grid-line"
+        }, g);
+        var t = svgEl("text", {
+          x: BOUNDS.lonMin + 0.06, y: projY(lat) - 0.02,
+          "class": "grid-label"
+        }, g);
+        t.textContent = lat + "°N";
+      }
+      for (var lon = Math.ceil(BOUNDS.lonMin); lon <= BOUNDS.lonMax; lon++) {
+        svgEl("line", {
+          x1: projX(lon), y1: BOUNDS.latMin === 24.5 ? projY(BOUNDS.latMax) : 0,
+          x2: projX(lon), y2: projY(BOUNDS.latMin),
+          "class": "grid-line"
+        }, g);
+        var t2 = svgEl("text", {
+          x: projX(lon) + 0.04, y: projY(BOUNDS.latMin) - 0.06,
+          "class": "grid-label"
+        }, g);
+        t2.textContent = lon + "°E";
+      }
+
+      // Land masses
+      var land = document.getElementById("land");
+      clear(land);
+      Object.keys(COASTLINES).forEach(function(key) {
+        var pts = COASTLINES[key].map(function(p) {
+          return projX(p[0]) + "," + projY(p[1]);
+        }).join(" ");
+        svgEl("polygon", { points: pts, "class": "land" }, land);
+      });
+
+      // Country labels
+      var cl = document.getElementById("country-labels");
+      clear(cl);
+      COUNTRY_LABELS.forEach(function(c) {
+        var t = svgEl("text", {
+          x: projX(c.lon), y: projY(c.lat),
+          "class": "country-label",
+          "text-anchor": "middle"
+        }, cl);
+        t.textContent = c.name;
+      });
+
+      // Locations
+      var locs = document.getElementById("locations");
+      clear(locs);
+      var locDict = sim.locations || {};
+      Object.keys(locDict).forEach(function(id) {
+        var L = locDict[id];
+        var x = projX(L.lon), y = projY(L.lat);
+        var size = 0.07;
+        var grp = svgEl("g", { transform: "translate(" + x + " " + y + ")" }, locs);
+        var rect = svgEl("rect", {
+          x: -size/2, y: -size/2, width: size, height: size,
+          "class": "loc-marker kind-" + L.kind
+        }, grp);
+        var title = svgEl("title", {}, rect);
+        title.textContent = L.name + " (" + L.kind + ", " + L.country + ")";
+        var lbl = svgEl("text", {
+          x: size/2 + 0.04, y: size/2 - 0.005,
+          "class": "loc-label"
+        }, grp);
+        lbl.textContent = L.name;
+      });
+    }
+
+    // ---------- Event dots ----------
+    function eventVisibility(ev, t) {
+      var start = ev.t_hours - 0.5;
+      var endActive = ev.t_hours + Math.min(6.0, ev.ltiov_hours);
+      var endFade = endActive + 4.0;
+      if (t < start || t >= endFade) return null;
+      if (t < endActive) return { state: "active", opacity: 1.0 };
+      var k = (endFade - t) / 4.0;
+      return { state: "fading", opacity: Math.max(0, k) };
+    }
+    function renderEventDots() {
+      var g = document.getElementById("events");
+      clear(g);
+      sim.events.forEach(function(ev) {
+        var vis = eventVisibility(ev, simT);
+        if (!vis) return;
+        var x = projX(ev.lon), y = projY(ev.lat);
+        var sev = ev.severity;
+        var rOuter = 0.07 + sev * 0.045;
+        var rCore  = 0.04 + sev * 0.012;
+        var grp = svgEl("g", {
+          transform: "translate(" + x + " " + y + ")",
+          "class": "event-dot sev-" + sev + (ev.scripted ? " scripted" : "") + (selectedEventId === ev.event_id ? " selected" : ""),
+          "data-event-id": ev.event_id,
+          opacity: vis.opacity
+        }, g);
+        svgEl("circle", { r: rOuter, "class": "ring ring-outer sev-" + sev }, grp);
+        svgEl("circle", { r: rCore, "class": "core sev-" + sev }, grp);
+        var glyph = EVENT_TYPE_GLYPH[ev.event_type] || "?";
+        var t = svgEl("text", {
+          x: 0, y: 0.025,
+          "text-anchor": "middle",
+          "class": "ev-glyph",
+          "font-family": "var(--mono)",
+          "font-size": "0.06",
+          "font-weight": "600",
+          fill: "rgba(0,0,0,0.85)",
+          "pointer-events": "none"
+        }, grp);
+        t.textContent = glyph;
+        var title = svgEl("title", {}, grp);
+        title.textContent = ev.event_type + "  sev " + ev.severity + " / conf " + ev.source_confidence + "\n" + ev.narrative;
+        grp.addEventListener("click", function() { selectEvent(ev.event_id); });
+      });
+    }
+
+    // ---------- Selection ----------
+    function selectEvent(id) {
+      selectedEventId = id;
+      renderEventDots();
+      renderBidPanel();
+      // highlight in feed
+      Array.prototype.forEach.call(document.querySelectorAll(".feed-row"), function(row) {
+        row.classList.toggle("selected", row.getAttribute("data-event-id") === id);
+      });
+      var sel = document.querySelector(".feed-row.selected");
+      if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: "nearest" });
+    }
+
+    function renderBidPanel() {
+      var body = document.getElementById("bid-body");
+      var count = document.getElementById("bid-count");
+      clear(body);
+      if (!selectedEventId) {
+        count.textContent = "";
+        var d = document.createElement("div");
+        d.className = "bid-empty";
+        d.textContent = "Click an event on the map or in the feed to inspect its derived stakeholder bids.";
+        body.appendChild(d);
+        return;
+      }
+      var ev = sim.events.find(function(e) { return e.event_id === selectedEventId; });
+      var bids = bidsByEvent[selectedEventId] || [];
+      count.textContent = bids.length + " bid" + (bids.length === 1 ? "" : "s");
+
+      var head = document.createElement("div");
+      head.className = "selected-event";
+      var idSpan = document.createElement("span");
+      idSpan.className = "se-id";
+      idSpan.textContent = ev.event_id;
+      var typeSpan = document.createElement("span");
+      typeSpan.className = "se-type";
+      typeSpan.textContent = ev.event_type + " / sev " + ev.severity + " / conf " + ev.source_confidence.toFixed(2);
+      head.appendChild(idSpan);
+      head.appendChild(typeSpan);
+      var narr = document.createElement("div");
+      narr.className = "se-narr";
+      narr.textContent = ev.narrative;
+      head.appendChild(narr);
+      var meta = document.createElement("div");
+      meta.className = "se-meta";
+      meta.textContent = "t+" + ev.t_hours.toFixed(1) + "h · " + ev.location_id + " · LTIOV " + ev.ltiov_hours + "h · " + ev.phase;
+      head.appendChild(meta);
+      body.appendChild(head);
+
+      bids.forEach(function(b) {
+        var row = document.createElement("div");
+        row.className = "bid-row";
+        var stake = document.createElement("div");
+        stake.className = "bid-stake";
+        var s = stakeholdersById[b.stakeholder_id];
+        stake.textContent = s ? s.display_name : b.stakeholder_id;
+        var score = document.createElement("div");
+        score.className = "bid-score";
+        score.textContent = b.priority_score.toFixed(2);
+        var rat = document.createElement("div");
+        rat.className = "bid-rationale";
+        rat.textContent = b.rationale;
+        row.appendChild(stake);
+        row.appendChild(score);
+        row.appendChild(rat);
+        body.appendChild(row);
+      });
+    }
+
+    // ---------- Event feed ----------
+    function renderFeed() {
+      var feed = document.getElementById("event-feed");
+      clear(feed);
+      document.getElementById("feed-count").textContent = sim.events.length + " events";
+      sim.events.forEach(function(ev) {
+        var row = document.createElement("div");
+        row.className = "feed-row" + (ev.scripted ? " scripted" : "");
+        row.setAttribute("data-event-id", ev.event_id);
+        row.setAttribute("data-t-hours", String(ev.t_hours));
+        var t = document.createElement("div");
+        t.className = "feed-t";
+        t.textContent = "t+" + ev.t_hours.toFixed(1) + "h";
+        var sev = document.createElement("div");
+        sev.className = "feed-sev";
+        sev.textContent = String(ev.severity);
+        sev.style.color = "var(--sev" + ev.severity + ")";
+        var text = document.createElement("div");
+        text.className = "feed-text";
+        var typ = document.createElement("div");
+        typ.className = "feed-type";
+        typ.textContent = ev.event_id + "  " + ev.event_type;
+        var narr = document.createElement("div");
+        narr.className = "feed-narr";
+        narr.textContent = ev.narrative;
+        var loc = document.createElement("div");
+        loc.className = "feed-loc";
+        loc.textContent = ev.location_id + "  ·  " + ev.phase;
+        text.appendChild(typ);
+        text.appendChild(narr);
+        text.appendChild(loc);
+        row.appendChild(t);
+        row.appendChild(sev);
+        row.appendChild(text);
+        row.addEventListener("click", function() { selectEvent(ev.event_id); });
+        feed.appendChild(row);
+      });
+      updateFeedFuture();
+    }
+    function updateFeedFuture() {
+      Array.prototype.forEach.call(document.querySelectorAll(".feed-row"), function(row) {
+        var th = parseFloat(row.getAttribute("data-t-hours"));
+        row.classList.toggle("future", th > simT + 0.01);
+      });
+    }
+
+    // ---------- Timeline ----------
+    function renderTimelineStatic() {
+      var svg = document.getElementById("timeline-svg");
+      svg.setAttribute("viewBox", "0 0 1000 180");
+      clear(svg);
+      var dur = sim.meta.duration_hours;
+
+      // Phase bands
+      var phases = sim.meta.phases.slice();
+      for (var i = 0; i < phases.length; i++) {
+        var p = phases[i];
+        var next = phases[i+1];
+        var x0 = (p.start_hours / dur) * 1000;
+        var x1 = ((next ? next.start_hours : dur) / dur) * 1000;
+        var color = PHASE_COLOR[p.name] || "#444";
+        svgEl("rect", {
+          x: x0, y: 0, width: x1 - x0, height: 30,
+          fill: color, "class": "phase-band"
+        }, svg);
+        var lbl = svgEl("text", {
+          x: x0 + 6, y: 13, "class": "phase-label"
+        }, svg);
+        lbl.textContent = p.name.replace(/_/g, " ");
+        var mult = svgEl("text", {
+          x: x0 + 6, y: 24, "class": "phase-mult"
+        }, svg);
+        mult.textContent = "x" + p.rate_multiplier.toFixed(1);
+      }
+
+      // Hour ticks at top of event lane
+      for (var h = 0; h <= dur; h += 12) {
+        var x = (h / dur) * 1000;
+        svgEl("line", {
+          x1: x, y1: 32, x2: x, y2: 38,
+          "class": (h % 24 === 0) ? "tick-day" : "tick-hour"
+        }, svg);
+        if (h % 24 === 0) {
+          var d = svgEl("text", { x: x + 3, y: 46, "class": "tick-label" }, svg);
+          d.textContent = "D" + (h/24);
+        }
+      }
+
+      // Event ticks
+      var laneTop = 50, laneBot = 160;
+      sim.events.forEach(function(ev) {
+        var x = (ev.t_hours / dur) * 1000;
+        var hpx = 10 + ev.severity * 14;
+        var y2 = laneBot;
+        var y1 = laneBot - hpx;
+        var g = svgEl("g", { "class": "ev-tick-g", "data-event-id": ev.event_id }, svg);
+        var line = svgEl("line", {
+          x1: x, y1: y1, x2: x, y2: y2,
+          stroke: "var(--sev" + ev.severity + ")",
+          "class": "ev-tick" + (ev.scripted ? " scripted" : "")
+        }, g);
+        var title = svgEl("title", {}, line);
+        title.textContent = "t+" + ev.t_hours.toFixed(1) + "h  " + ev.event_id + "  " + ev.event_type;
+        line.addEventListener("click", function() { selectEvent(ev.event_id); });
+      });
+
+      // Playhead group (added last so it sits on top)
+      var ph = svgEl("g", { id: "playhead-g" }, svg);
+      svgEl("line", {
+        id: "playhead-line",
+        x1: 0, y1: 30, x2: 0, y2: laneBot,
+        "class": "playhead"
+      }, ph);
+      svgEl("polygon", {
+        id: "playhead-handle",
+        points: "-5,30 5,30 0,38",
+        "class": "playhead-handle"
+      }, ph);
+
+      // Click-to-scrub
+      svg.addEventListener("click", function(e) {
+        // ignore clicks on event ticks (their handler runs first, but
+        // click bubbles — only scrub if not on a tick)
+        if (e.target.tagName === "line" && e.target.classList.contains("ev-tick")) return;
+        var rect = svg.getBoundingClientRect();
+        var rel = (e.clientX - rect.left) / rect.width;
+        var hrs = Math.max(0, Math.min(dur, rel * dur));
+        simT = hrs;
+        onTimeChanged();
+      });
+    }
+    function updatePlayhead() {
+      var dur = sim.meta.duration_hours;
+      var x = (simT / dur) * 1000;
+      var line = document.getElementById("playhead-line");
+      var handle = document.getElementById("playhead-handle");
+      if (line) { line.setAttribute("x1", x); line.setAttribute("x2", x); }
+      if (handle) handle.setAttribute("transform", "translate(" + x + " 0)");
+
+      // Update future state on event ticks
+      Array.prototype.forEach.call(document.querySelectorAll(".ev-tick-g"), function(g) {
+        var id = g.getAttribute("data-event-id");
+        var ev = sim.events.find(function(e) { return e.event_id === id; });
+        if (!ev) return;
+        var line = g.querySelector(".ev-tick");
+        if (line) line.classList.toggle("future", ev.t_hours > simT + 0.01);
+      });
+    }
+
+    // ---------- Clock / phase ----------
+    function fmtSimClock() {
+      var t0 = new Date(sim.meta.t0_iso);
+      var d = new Date(t0.getTime() + simT * 3600 * 1000);
+      function pad(n) { return n < 10 ? "0" + n : "" + n; }
+      var iso = d.getUTCFullYear() + "-" + pad(d.getUTCMonth()+1) + "-" + pad(d.getUTCDate())
+              + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + "Z";
+      return iso;
+    }
+    function currentPhase() {
+      var phases = sim.meta.phases;
+      var active = phases[0];
+      for (var i = 0; i < phases.length; i++) {
+        if (simT >= phases[i].start_hours) active = phases[i];
+      }
+      return active;
+    }
+    function updateClock() {
+      var p = currentPhase();
+      document.getElementById("scenario-name").textContent = sim.meta.scenario;
+      document.getElementById("phase-badge").textContent = p.name.replace(/_/g, " ");
+      document.getElementById("phase-badge").style.color = PHASE_COLOR[p.name] ? "#e6c79a" : "var(--amber)";
+      var totalH = sim.meta.duration_hours;
+      document.getElementById("clock").innerHTML =
+        fmtSimClock() + '<span class="t-rel">t+' + simT.toFixed(1) + 'h / ' + totalH.toFixed(0) + 'h</span>';
+    }
+
+    function onTimeChanged() {
+      simT = Math.max(0, Math.min(sim.meta.duration_hours, simT));
+      updateClock();
+      renderEventDots();
+      updatePlayhead();
+      updateFeedFuture();
+    }
+
+    // ---------- Playback loop ----------
+    function startLoop() {
+      lastFrame = performance.now();
+      requestAnimationFrame(tick);
+    }
+    function tick(now) {
+      var dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+      if (playing && sim) {
+        // 1x means 1 real-second = 1 sim-second; scale by speed.
+        simT += (dt / 3600) * speed;
+        if (simT >= sim.meta.duration_hours) {
+          simT = sim.meta.duration_hours;
+          playing = false;
+          updatePlayButton();
+        }
+        onTimeChanged();
+      }
+      requestAnimationFrame(tick);
+    }
+    function updatePlayButton() {
+      var btn = document.getElementById("btn-play");
+      btn.innerHTML = playing ? "&#10074;&#10074; PAUSE" : "&#9658; PLAY";
+    }
+
+    // ---------- Controls ----------
+    function wireControls() {
+      document.getElementById("btn-play").addEventListener("click", function() {
+        playing = !playing;
+        if (playing && simT >= sim.meta.duration_hours) simT = 0;
+        updatePlayButton();
+      });
+      document.getElementById("btn-reset").addEventListener("click", function() {
+        simT = 0;
+        playing = false;
+        updatePlayButton();
+        onTimeChanged();
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("#speeds button"), function(b) {
+        b.addEventListener("click", function() {
+          speed = parseFloat(b.getAttribute("data-speed"));
+          Array.prototype.forEach.call(document.querySelectorAll("#speeds button"), function(x) {
+            x.classList.toggle("active", x === b);
+          });
+        });
+      });
+      window.addEventListener("keydown", function(e) {
+        if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+        if (e.code === "Space") {
+          e.preventDefault();
+          document.getElementById("btn-play").click();
+        } else if (e.code === "ArrowLeft") {
+          e.preventDefault();
+          simT -= 2;
+          onTimeChanged();
+        } else if (e.code === "ArrowRight") {
+          e.preventDefault();
+          simT += 2;
+          onTimeChanged();
+        } else if (e.code === "KeyR") {
+          document.getElementById("btn-reset").click();
+        }
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -25,6 +25,7 @@ from .coverage import (
 from .propagate import (
     build_satellites,
     build_satellites_from_fixture,
+    build_satellites_from_fixture_dir,
     make_skyfield_satellite,
     propagate_subpoint,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "Constellation",
     "build_satellites",
     "build_satellites_from_fixture",
+    "build_satellites_from_fixture_dir",
     "build_supply",
     "build_supply_from_satellites",
     "by_id",

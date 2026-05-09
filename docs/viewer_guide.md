@@ -11,6 +11,8 @@ Both stage cleanly with no build step, no bundler, no `npm install`.
 
 ## Quick start (v0.2 globe)
 
+Single-constellation (5 satellites):
+
 ```bash
 raveneye-build-scenario --seed 42 --duration 168 --mechanism ssi \
   --tle-fixture tests/fixtures/tles.txt \
@@ -19,12 +21,38 @@ cd viewer_out && python3 -m http.server
 # open http://localhost:8000/
 ```
 
+Multi-constellation (~36 satellites across 6 vendors — recommended for
+demos that should show vendor diversity):
+
+```bash
+raveneye-build-scenario --seed 42 --duration 168 --mechanism ssi \
+  --tle-fixture-dir tests/fixtures/multi_tles \
+  --out viewer_out/scenario.json --viewer viewer_out
+```
+
 Override the data URL with `?scenario=path/to/scenario.json` or set
 `window.RAVENEYE_SCENARIO_URL` in a wrapper page.
 
 For network-fetched TLEs (production), drop the `--tle-fixture` flag and
 let CelesTrak provide the elsets (with on-disk caching under
 `data/tle_cache/`).
+
+## Two views: GLOBE and BOARD
+
+The header has a tab pair — **GLOBE** (default) and **BOARD** —
+that flips between two coordinated views of the same scenario data.
+Both views share the playback clock at the bottom of the page, so
+scrubbing the timeline in one view advances the other.
+
+| Tab | Shows |
+|---|---|
+| **GLOBE** | Earth + orbiting satellites + ground markers + coverage swaths during scheduled access windows |
+| **BOARD** | Per-target Gantt of allocated windows (top half) + Kanban tasking flow (bottom half), both clock-driven |
+
+There's also a **RTB** button next to the brand mark that opens an
+architecture explainer drawer — a sales-pitch overlay walking through
+the four layers of the system with live numbers from the loaded
+scenario. Press `?` to toggle, `Esc` to close.
 
 ## Layout
 
@@ -261,3 +289,83 @@ If you push beyond ~250 sats and feel the framerate dip, the cheapest
 wins are: lower the SGP4 sample step from 30 s to 60 s in `orbits.js`
 (`SAMPLE_S`), and shorten the orbit ribbon trail from 20 min to 10 min
 (`RIBBON_MIN`).
+
+## BOARD tab — Gantt + Kanban
+
+A second top-level page in the viewer, accessed via the **BOARD** tab
+in the header. Two coordinated views on the same allocation set, both
+driven by the playback clock that drives the GLOBE view.
+
+### Gantt (top half)
+
+One row per target location, sorted by allocation count desc — the
+busiest target sits at the top. Each scheduled allocation renders as
+a horizontal bar that spans collection → processing → in-transit →
+delivered. The four lifecycle stages are nested colored segments:
+
+| Segment | Color | Stage |
+|---|---|---|
+| Outer fill | cyan `#4cc4d8` | COLLECTING (the access window itself) |
+| Inner stripe at center | amber `#f0a020` | PROCESSING (window end → processing complete) |
+| Inner stripe at center, narrower | orange `#e07b3c` | IN_TRANSIT (processing → delivered) |
+| Terminal circle at right edge | per status | final outcome |
+
+Bar height encodes bid priority — taller bars are higher-priority
+work. A vertical cyan playhead tracks the Cesium clock; scrub the
+bottom timeline to see exactly where in each delivery cycle you are.
+
+Hover any bar to see bid_id, sat_id, priority, terminal status, and
+delivery timestamp.
+
+### Kanban (bottom half)
+
+Five flow columns showing where each scheduled allocation sits *right
+now* given the playback clock:
+
+```
+BIDDED → COLLECTING → PROCESSING → IN_TRANSIT → DELIVERED
+```
+
+Cards advance left-to-right as the clock moves forward. Within each
+column, cards are sorted by priority desc — so the top card in the
+**BIDDED** column is always the highest-priority bid that hasn't
+collected yet, i.e. the next-up tasking.
+
+Each card shows:
+
+- `bid_id` (linkable color)
+- priority score (amber)
+- target location ID
+- assigned satellite + window start time
+
+Below the five-column flow there's a **TERMINAL FAILURES** lane that
+shows the three terminal failure modes from the delivery pipeline:
+
+- `DEADLINE_MISSED` — image delivered after LTIOV
+- `PROCESSING_FAILED` — collection happened, processing pipeline rejected
+- `DROPPED` — mechanism couldn't match the bid to any window
+
+Cards never re-enter the flow once they're in a terminal column.
+
+Columns cap at 60 cards each (with a "… and N more" footer) so the
+700+ allocation full-week scenario doesn't lock up the DOM. The
+Kanban re-buckets every 500 ms of real time during playback.
+
+## RTB drawer
+
+Press the **RTB** button next to the brand mark (or press `?`) to
+open the architecture explainer drawer. A 560-px-wide panel slides in
+from the left and walks through:
+
+1. **Why RTB.** The case for treating multi-constellation EO tasking
+   as a real-time auction.
+2. **The four-layer architecture** with live counts at each layer
+   (DEMAND → SUPPLY → MECHANISM → DELIVERY) pulled from
+   `scenario.meta`.
+3. **One section per layer** with definition-list aggregates.
+4. **What this unblocks** — the closing argument for v0.3+ research
+   work.
+
+Press `Esc` or click outside the drawer to dismiss. The drawer is
+**not** modal — playback continues behind it, and the ESC/click-out
+behavior leaves the clock and globe state untouched.

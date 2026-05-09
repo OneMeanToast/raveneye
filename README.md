@@ -8,11 +8,29 @@ to Palantir MetaConstellation. It is an **evaluation environment** — the thing
 that tells you which tasking design survives contact with real operational
 tempo.
 
-**v0.2** adds the supply layer (TLEs, SGP4 propagation, access windows), the
-mechanism layer (greedy + sequential single-item auction), and a CesiumJS
-globe viewer that ties bids to access windows to satellite collects in real
-time. **v0.1** shipped the demand layer (events, stakeholder bids, phase tempo,
-flat choke-point map).
+**v0.2.1** is the current release. Layered on top of v0.2:
+
+- **Multi-constellation offline TLE fixture** — 36 satellites across all
+  six vendors (BlackSky, SkySat, Planet Dove, Capella, ICEYE, Maxar)
+  for demos that don't have CelesTrak access. New CLI flag
+  `--tle-fixture-dir`.
+- **Image-delivery pipeline** — every allocation gets a `lifecycle`
+  sub-dict with collection / processing / delivery timestamps and a
+  terminal status: `DELIVERED`, `DEADLINE_MISSED`, `PROCESSING_FAILED`,
+  or `DROPPED`. Per-vendor processing & delivery latencies; success
+  rate modulated by access-window quality. See
+  `docs/delivery_pipeline.md`.
+- **RTB / architecture explainer drawer** — toggleable side panel
+  (RTB button or `?` key) that walks a prospect through the four-layer
+  architecture with live numbers from the loaded scenario.
+- **BOARD tab** — second top-level page in the viewer with a per-target
+  Gantt of allocated windows + a five-column Kanban tasking flow,
+  both clock-driven.
+
+**v0.2** added the supply layer (TLEs, SGP4 propagation, access windows),
+the mechanism layer (greedy + sequential single-item auction), and the
+CesiumJS globe viewer. **v0.1** shipped the demand layer (events,
+stakeholder bids, phase tempo, flat choke-point map).
 
 ## Install
 
@@ -36,15 +54,25 @@ arrives in v0.2.
 
 ## v0.2 — full scenario + globe
 
+Multi-constellation, fully offline (recommended starting point — 36 sats
+across all 6 vendors, no CelesTrak access required):
+
 ```
-# offline path (works without CelesTrak access; uses the committed TLE fixture)
 raveneye-build-scenario --seed 42 --duration 168 --mechanism ssi \
-  --tle-fixture tests/fixtures/tles.txt \
+  --tle-fixture-dir tests/fixtures/multi_tles \
   --out viewer_out/scenario.json --viewer viewer_out
 cd viewer_out && python3 -m http.server
 ```
 
-For network-fetched TLEs (production):
+Single-constellation offline (5 sats, smaller demo):
+
+```
+raveneye-build-scenario --seed 42 --duration 168 --mechanism ssi \
+  --tle-fixture tests/fixtures/tles.txt \
+  --out viewer_out/scenario.json --viewer viewer_out
+```
+
+For network-fetched TLEs (production, requires CelesTrak access):
 
 ```
 raveneye-build-scenario --seed 42 --duration 168 --mechanism ssi \
@@ -56,8 +84,13 @@ scenario satellites propagating live, orbit ribbons by vendor, ground markers
 for the 15 Hormuz locations, **pulsing event rings** at occurrence, **swath
 polygons drawn during scheduled access windows** with a dashed sat-to-target
 tether, the per-event allocation panel showing every derived bid alongside
-which sat / window serves it, and an access-window density histogram on the
-timeline.
+which sat / window serves it (including the full delivery lifecycle —
+captured → processed → delivered with per-vendor latencies), and an
+access-window density histogram on the timeline.
+
+Two tabs in the header — **GLOBE** and **BOARD** — flip between the
+3D view and a Gantt + Kanban tasking flow on the same data. Press the
+**RTB** button (or `?`) to open the architecture explainer drawer.
 
 `--legacy-flat-map` stages the v0.1 flat map with the v0.2 scenario JSON
 (handy for embeds that don't want a 3D globe).
@@ -86,8 +119,9 @@ timeline.
 | `--legacy-flat-map` | *(off)* | Stage flat map instead of globe. |
 | `--cache-dir` | `data/tle_cache` | TLE cache directory. |
 | `--refresh-tles` | *(off)* | Bypass TLE cache. |
-| `--tle-fixture` | *(off)* | Use this offline TLE file instead of CelesTrak. |
-| `--fixture-constellation` | `blacksky` | Tag fixture sats with this constellation. |
+| `--tle-fixture` | *(off)* | Use this offline TLE file instead of CelesTrak (single constellation). |
+| `--fixture-constellation` | `blacksky` | Tag fixture sats with this constellation (single-constellation mode only). |
+| `--tle-fixture-dir` | *(off)* | Scan this directory for `<constellation_id>.txt` files; multi-constellation offline mode. Mutually exclusive with `--tle-fixture`. |
 | `--min-elevation` | `20.0` | Minimum access-window elevation (deg). |
 | `--stats` | *(off)* | Print summary stats. |
 
@@ -235,8 +269,12 @@ host's auto-detect picks the wrong Python.
   worked greedy-vs-SSI example, how to add a new mechanism.
 - `docs/orbital_model.md` — TLE/OMM, SGP4 accuracy, access windows, quality
   scoring, vendor-spec citations, OMM transition note.
+- `docs/delivery_pipeline.md` — image-delivery state machine, per-vendor
+  latencies, quality-modulated success rate, lifecycle aggregates,
+  determinism guarantees.
 - `docs/viewer_guide.md` — globe layout, side panels, timeline lanes,
-  coverage tether, keyboard, URL flags, deploy notes.
+  coverage tether, BOARD tab (Gantt + Kanban), RTB drawer, keyboard,
+  URL flags, deploy notes.
 
 ## What's next
 

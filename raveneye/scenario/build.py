@@ -18,6 +18,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
+from ..delivery import (
+    apply_delivery_pipeline,
+    delivery_rate,
+    processing_success_rate_observed,
+)
 from ..mechanism import Mechanism, allocate, drop_rate, total_welfare
 from ..orbital import (
     CONSTELLATIONS,
@@ -40,9 +45,15 @@ def _meta(
     mechanism_name: str,
     welfare: float,
     drop: float,
+    delivery_rate_value: float,
+    processing_rate_value: float,
 ) -> Dict[str, Any]:
     sim_meta = sim.get("meta", {})
     sup_meta = supply.get("meta", {})
+
+    def _final(a: Dict[str, Any]) -> str:
+        return (a.get("lifecycle") or {}).get("final_status", a.get("status", ""))
+
     return {
         "scenario": sim_meta.get("scenario", "RavenEye scenario"),
         "t0_iso": sim_meta.get("t0_iso") or sup_meta.get("t0_iso"),
@@ -58,9 +69,15 @@ def _meta(
         "n_allocations": len(allocations_dicts),
         "n_scheduled": sum(1 for a in allocations_dicts if a.get("status") == "SCHEDULED"),
         "n_dropped":   sum(1 for a in allocations_dicts if a.get("status") == "DROPPED"),
+        # Lifecycle aggregates — terminal states from the delivery pipeline.
+        "n_delivered": sum(1 for a in allocations_dicts if _final(a) == "DELIVERED"),
+        "n_processing_failed": sum(1 for a in allocations_dicts if _final(a) == "PROCESSING_FAILED"),
+        "n_deadline_missed": sum(1 for a in allocations_dicts if _final(a) == "DEADLINE_MISSED"),
         "min_elevation_deg": sup_meta.get("min_elevation_deg"),
         "total_welfare": welfare,
         "drop_rate": drop,
+        "delivery_rate": delivery_rate_value,
+        "processing_success_rate": processing_rate_value,
     }
 
 
@@ -70,14 +87,30 @@ def _assemble(
     allocation_objs,
     *,
     mechanism_name: str,
+    seed: int,
+    constellations: Iterable[Constellation],
 ) -> Dict[str, Any]:
-    alloc_dicts = [a.to_dict() for a in allocation_objs]
     welfare = total_welfare(allocation_objs)
     drop = drop_rate(allocation_objs)
+    # Run the delivery pipeline on the raw allocation list — produces
+    # one dict per allocation with the lifecycle sub-dict attached.
+    alloc_dicts = apply_delivery_pipeline(
+        allocation_objs,
+        bids=sim.get("bids", []),
+        access_windows=supply.get("access_windows", []),
+        satellites=supply.get("satellites", []),
+        constellations=constellations,
+        seed=seed,
+    )
     return {
-        "meta": _meta(sim, supply, alloc_dicts,
-                      mechanism_name=mechanism_name,
-                      welfare=welfare, drop=drop),
+        "meta": _meta(
+            sim, supply, alloc_dicts,
+            mechanism_name=mechanism_name,
+            welfare=welfare,
+            drop=drop,
+            delivery_rate_value=delivery_rate(alloc_dicts),
+            processing_rate_value=processing_success_rate_observed(alloc_dicts),
+        ),
         "locations":      sim.get("locations", {}),
         "stakeholders":   sim.get("stakeholders", []),
         "sensor_requirements": sim.get("sensor_requirements", {}),
@@ -119,7 +152,12 @@ def build_full_scenario(
         satellites=supply["satellites"],
     )
     mech_name = mechanism if isinstance(mechanism, str) else mechanism.name
-    return _assemble(sim, supply, allocations, mechanism_name=mech_name)
+    return _assemble(
+        sim, supply, allocations,
+        mechanism_name=mech_name,
+        seed=seed,
+        constellations=constellations,
+    )
 
 
 def build_full_scenario_offline(
@@ -151,4 +189,11 @@ def build_full_scenario_offline(
         satellites=satellites,
     )
     mech_name = mechanism if isinstance(mechanism, str) else mechanism.name
-    return _assemble(sim, supply, allocations, mechanism_name=mech_name)
+    # constellations may be an empty tuple in offline tests; in that case
+    # the delivery pipeline falls back to default per-vendor latencies.
+    return _assemble(
+        sim, supply, allocations,
+        mechanism_name=mech_name,
+        seed=seed,
+        constellations=constellations,
+    )

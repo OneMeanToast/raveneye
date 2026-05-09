@@ -27,6 +27,25 @@ class Constellation:
     slew_rate_deg_s: float
     duty_cycle_pct: float
     celestrak_group: str
+    # Delivery-pipeline parameters (notional, vendor-published-spec scale).
+    # processing_latency_min — wall-clock from collection end to "image
+    # processed and ready to ship". Includes downlink to ground + on-prem
+    # processing. Vendors that pitch fast turnaround (Capella, ICEYE) sit
+    # at 30-45 min; high-res EO with heavier processing pipelines (Maxar)
+    # sits at 3 h; small-sat constellations with a sparser ground network
+    # (Planet Dove) sit at 12 h.
+    processing_latency_min: float = 60.0
+    # delivery_latency_min — handoff from "processed and ready" to "in
+    # the customer's hands". Network/API/portal time. Always shorter than
+    # processing.
+    delivery_latency_min: float = 30.0
+    # processing_success_rate — fraction of collected images that survive
+    # the processing pipeline. Cloud cover, sensor calibration drift,
+    # bad-frame rejection. SAR is illumination-independent so its base
+    # rate is higher than EO. The actual roll per allocation is modulated
+    # by the access window's quality_score:
+    #     effective = base × (0.5 + 0.5 × quality_score)
+    processing_success_rate: float = 0.85
 
     def to_dict(self) -> dict:
         return {
@@ -40,6 +59,9 @@ class Constellation:
             "slew_rate_deg_s": self.slew_rate_deg_s,
             "duty_cycle_pct": self.duty_cycle_pct,
             "celestrak_group": self.celestrak_group,
+            "processing_latency_min": self.processing_latency_min,
+            "delivery_latency_min": self.delivery_latency_min,
+            "processing_success_rate": self.processing_success_rate,
         }
 
 
@@ -55,6 +77,9 @@ CONSTELLATIONS: List[Constellation] = [
         slew_rate_deg_s=1.0,
         duty_cycle_pct=20.0,
         celestrak_group="blacksky",
+        processing_latency_min=45.0,
+        delivery_latency_min=30.0,
+        processing_success_rate=0.85,
     ),
     Constellation(
         constellation_id="skysat",
@@ -67,6 +92,9 @@ CONSTELLATIONS: List[Constellation] = [
         slew_rate_deg_s=0.8,
         duty_cycle_pct=15.0,
         celestrak_group="skysat",
+        processing_latency_min=60.0,
+        delivery_latency_min=30.0,
+        processing_success_rate=0.85,
     ),
     Constellation(
         constellation_id="planet_dove",
@@ -79,6 +107,9 @@ CONSTELLATIONS: List[Constellation] = [
         slew_rate_deg_s=0.1,
         duty_cycle_pct=80.0,
         celestrak_group="planet",
+        processing_latency_min=720.0,   # 12h — sparser ground-station network
+        delivery_latency_min=180.0,
+        processing_success_rate=0.80,
     ),
     Constellation(
         constellation_id="capella",
@@ -91,6 +122,9 @@ CONSTELLATIONS: List[Constellation] = [
         slew_rate_deg_s=1.5,
         duty_cycle_pct=12.0,
         celestrak_group="capella",
+        processing_latency_min=30.0,    # SAR fast-turnaround pitch
+        delivery_latency_min=15.0,
+        processing_success_rate=0.92,   # SAR ignores cloud cover
     ),
     Constellation(
         constellation_id="iceye",
@@ -103,6 +137,9 @@ CONSTELLATIONS: List[Constellation] = [
         slew_rate_deg_s=1.5,
         duty_cycle_pct=15.0,
         celestrak_group="iceye",
+        processing_latency_min=45.0,
+        delivery_latency_min=20.0,
+        processing_success_rate=0.92,
     ),
     Constellation(
         constellation_id="maxar_wv",
@@ -115,6 +152,9 @@ CONSTELLATIONS: List[Constellation] = [
         slew_rate_deg_s=3.5,
         duty_cycle_pct=10.0,
         celestrak_group="maxar",
+        processing_latency_min=180.0,   # heavier processing for VHR
+        delivery_latency_min=60.0,
+        processing_success_rate=0.88,
     ),
 ]
 

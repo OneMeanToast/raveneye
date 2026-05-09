@@ -72,22 +72,32 @@
     renderEventFeed(scenario, viewer);
   }
 
+  function _pct(x) {
+    return (x != null) ? (x * 100).toFixed(1) + "%" : "—";
+  }
+
   function renderStats(scenario) {
     const m = scenario.meta || {};
     const body = document.getElementById("stats-body");
     if (!body) return;
     body.innerHTML = "";
     const rows = [
-      ["events",       m.n_events],
-      ["bids",         m.n_bids],
-      ["satellites",   m.n_satellites],
-      ["windows",      m.n_access_windows],
-      ["allocations",  m.n_allocations],
-      ["scheduled",    m.n_scheduled],
-      ["dropped",      m.n_dropped],
-      ["drop rate",    m.drop_rate != null ? (m.drop_rate * 100).toFixed(1) + "%" : "—"],
-      ["welfare",      m.total_welfare],
-      ["mechanism",    m.mechanism],
+      ["events",         m.n_events],
+      ["bids",           m.n_bids],
+      ["satellites",     m.n_satellites],
+      ["windows",        m.n_access_windows],
+      ["allocations",    m.n_allocations],
+      ["scheduled",      m.n_scheduled],
+      ["dropped",        m.n_dropped],
+      ["drop rate",      _pct(m.drop_rate)],
+      ["welfare",        m.total_welfare],
+      ["mechanism",      m.mechanism],
+      // Delivery-pipeline aggregates (Chunk 2)
+      ["delivered",      m.n_delivered],
+      ["proc. failed",   m.n_processing_failed],
+      ["deadline miss",  m.n_deadline_missed],
+      ["delivery rate",  _pct(m.delivery_rate)],
+      ["proc. success",  _pct(m.processing_success_rate)],
     ];
     for (const [k, v] of rows) {
       const a = document.createElement("div");
@@ -272,9 +282,21 @@
         e.preventDefault();
         focusAllocation(alloc, w);
       });
-      const status = document.createElement("span");
-      status.textContent = "  " + alloc.status;
-      status.style.color = "var(--green)";
+
+      // Lifecycle (chunk 2): final status + processing/delivery latency.
+      const lc = alloc.lifecycle || {};
+      const final = lc.final_status || alloc.status;
+      const FINAL_COLOR = {
+        DELIVERED:         "var(--green)",
+        DEADLINE_MISSED:   "var(--amber)",
+        PROCESSING_FAILED: "var(--red)",
+        DROPPED:           "var(--muted)",
+      };
+      const statusBadge = document.createElement("span");
+      statusBadge.textContent = "  " + final;
+      statusBadge.style.color = FINAL_COLOR[final] || "var(--text)";
+      statusBadge.style.fontWeight = "600";
+
       const win = document.createElement("div");
       win.style.color = "var(--text-dim)";
       win.style.marginTop = "2px";
@@ -286,12 +308,35 @@
       } else {
         win.textContent = alloc.window_id;
       }
+
+      // Delivery line: collected → processed → delivered with per-vendor latencies.
+      const delivery = document.createElement("div");
+      delivery.style.color = "var(--text-dim)";
+      delivery.style.marginTop = "2px";
+      if (lc.collected_iso) {
+        const collected = lc.collected_iso.substring(11, 16) + "Z";
+        const processed = lc.processing_complete_iso
+          ? lc.processing_complete_iso.substring(11, 16) + "Z" : "—";
+        const delivered = lc.delivered_iso
+          ? lc.delivered_iso.substring(11, 16) + "Z" : "—";
+        const latPP = lc.processing_latency_min != null
+          ? "+" + Math.round(lc.processing_latency_min) + "m" : "";
+        const latDD = lc.delivery_latency_min != null
+          ? "+" + Math.round(lc.delivery_latency_min) + "m" : "";
+        delivery.textContent =
+          "captured " + collected + " → processed " + processed + " " + latPP
+          + " → delivered " + delivered + " " + latDD;
+      } else {
+        delivery.textContent = "lifecycle: no data";
+      }
+
       const welfare = document.createElement("div");
       welfare.style.color = "var(--text-dim)";
       welfare.textContent = "welfare " + (alloc.welfare != null ? alloc.welfare : "—")
         + "  ·  " + alloc.mechanism;
-      outcome.appendChild(link); outcome.appendChild(status);
-      outcome.appendChild(win); outcome.appendChild(welfare);
+
+      outcome.appendChild(link); outcome.appendChild(statusBadge);
+      outcome.appendChild(win); outcome.appendChild(delivery); outcome.appendChild(welfare);
     } else {
       outcome.style.color = "var(--red)";
       outcome.textContent = "DROPPED  ·  " + alloc.mechanism + "  ·  " + (alloc.notes || "");

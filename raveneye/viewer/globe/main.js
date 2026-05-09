@@ -262,6 +262,7 @@
       wireSelection(viewer, scenario, eventEntities, locationEntities, satLayer);
       const board = global.RavenEyeBoard ? global.RavenEyeBoard.init(scenario, viewer) : null;
       wireTabs(viewer, board);
+      if (global.RavenEyeExplainer) global.RavenEyeExplainer.init(scenario);
 
       // Clock-driven UI updates: header clock, timeline playhead.
       viewer.clock.onTick.addEventListener(() => {

@@ -18,6 +18,9 @@
         <button id="tab-globe" class="header-tab active" role="tab" aria-selected="true">GLOBE</button>
         <button id="tab-board" class="header-tab" role="tab" aria-selected="false">BOARD</button>
       </div>
+      <button id="btn-explainer" class="header-btn" title="What is RavenEye? (?)">
+        <span>RTB</span>
+      </button>
       <div class="scenario" id="scenario-name">&mdash;</div>
       <div class="phase-badge" id="phase-badge">&mdash;</div>
       <div class="clock" id="clock">&mdash;</div>
@@ -122,6 +125,15 @@
     </div>
   </div>
 
+  <div id="explainer-scrim"></div>
+  <aside id="explainer-panel">
+    <div class="explainer-head">
+      <div class="explainer-title">RavenEye &mdash; the architecture</div>
+      <button id="btn-explainer-close" title="Close (Esc)">&times;</button>
+    </div>
+    <div id="explainer-content"></div>
+  </aside>
+
   <!-- Globe runtime: Cesium + satellite.js + RavenEye modules. Order matters. -->
   <script src="https://cdn.jsdelivr.net/npm/cesium@1.122.0/Build/Cesium/Cesium.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
@@ -131,6 +143,7 @@
   <script src="panels.js"></script>
   <script src="timeline.js"></script>
   <script src="board.js"></script>
+  <script src="explainer.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

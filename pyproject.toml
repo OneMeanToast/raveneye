@@ -51,6 +51,7 @@ packages = [
     "raveneye.sim",
     "raveneye.orbital",
     "raveneye.mechanism",
+    "raveneye.delivery",
     "raveneye.scenario",
     "raveneye.viewer",
 ]

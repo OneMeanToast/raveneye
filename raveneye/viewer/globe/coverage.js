@@ -15,10 +15,15 @@
 (function (global) {
   "use strict";
 
+  // Color palette by lifecycle.final_status (chunk 2). Falls back to
+  // allocation.status for older scenarios that predate the delivery
+  // pipeline.
   const STATUS_COLOR = {
-    SCHEDULED:        "#4cc4d8",
-    COLLECTED:        "#5fb87a",
-    DEADLINE_MISSED:  "#e55a3c",
+    SCHEDULED:         "#4cc4d8",
+    COLLECTED:         "#5fb87a",
+    DELIVERED:         "#5fb87a",
+    DEADLINE_MISSED:   "#f0a020",
+    PROCESSING_FAILED: "#e55a3c",
   };
 
   function _withinWindow(viewer, t0_iso, start_iso, end_iso) {
@@ -82,7 +87,11 @@
       if (!sat) continue;
       const sw_km = Math.max(2.0, sat.swath_width_km || 5.0);
       const swath_radius_m = (sw_km / 2.0) * 1000.0;
-      const baseColor = STATUS_COLOR[a.status] || "#a3b0bf";
+      // Prefer lifecycle.final_status if present; the mechanism's
+      // immediate status is just SCHEDULED/DROPPED — not enough to
+      // distinguish the four terminal outcomes.
+      const finalStatus = (a.lifecycle && a.lifecycle.final_status) || a.status;
+      const baseColor = STATUS_COLOR[finalStatus] || "#a3b0bf";
 
       const targetPos = Cesium.Cartesian3.fromDegrees(w.target_lon, w.target_lat);
 

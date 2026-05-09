@@ -146,6 +146,42 @@ def build_satellites_from_fixture(
     return out
 
 
+def build_satellites_from_fixture_dir(
+    fixture_dir: Path,
+    constellations: List[Constellation],
+    t0: datetime,
+) -> List[Dict]:
+    """Multi-constellation offline loader.
+
+    For each constellation in ``constellations``, look for a file named
+    ``<constellation_id>.txt`` inside ``fixture_dir``. Parse it as TLE
+    text and tag each satellite with that constellation's metadata.
+    Constellations whose fixture file is missing are skipped with a
+    warning — they simply contribute zero satellites, mirroring the
+    network ``build_satellites`` behavior on per-constellation fetch
+    failure.
+
+    Output is sorted by (constellation_id, norad_id) for determinism.
+    """
+    fixture_dir = Path(fixture_dir)
+    out: List[Dict] = []
+    for constellation in constellations:
+        path = fixture_dir / f"{constellation.constellation_id}.txt"
+        if not path.exists():
+            logger.warning(
+                "no fixture file for %s at %s — skipping constellation",
+                constellation.constellation_id, path,
+            )
+            continue
+        triples = parse_tle_text(path.read_text(encoding="utf-8"))
+        for triple in triples:
+            sat = _satellite_dict(triple, constellation, t0)
+            if sat is not None:
+                out.append(sat)
+    out.sort(key=lambda s: (s["constellation_id"], s["norad_id"]))
+    return out
+
+
 def make_skyfield_satellite(sat_dict: Dict) -> EarthSatellite:
     """Construct a Skyfield ``EarthSatellite`` from a satellite dict."""
     return EarthSatellite(

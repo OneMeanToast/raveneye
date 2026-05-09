@@ -50,11 +50,21 @@ def _parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
     p.add_argument(
         "--tle-fixture", type=Path, default=None,
         help="If set, use this offline TLE file instead of fetching from "
-             "CelesTrak. Useful for offline dev and air-gapped demos.",
+             "CelesTrak. Useful for offline dev and air-gapped demos. "
+             "All sats in the file get tagged with --fixture-constellation.",
     )
     p.add_argument(
         "--fixture-constellation", default="blacksky",
-        help="Constellation ID to attach to satellites loaded from --tle-fixture.",
+        help="Constellation ID to attach to satellites loaded from "
+             "--tle-fixture (single-constellation mode).",
+    )
+    p.add_argument(
+        "--tle-fixture-dir", type=Path, default=None,
+        help="If set, scan this directory for <constellation_id>.txt files "
+             "and load each as that constellation's TLEs. Multi-constellation "
+             "offline mode. Mutually exclusive with --tle-fixture. The "
+             "repository ships a sample at tests/fixtures/multi_tles/ "
+             "covering all 6 vendors (~36 sats).",
     )
     p.add_argument(
         "--min-elevation", type=float, default=20.0,
@@ -123,7 +133,29 @@ def _print_stats(scenario: dict) -> None:
 def main(argv: Optional[List[str]] = None) -> int:
     args = _parse_args(argv)
 
-    if args.tle_fixture is not None:
+    if args.tle_fixture is not None and args.tle_fixture_dir is not None:
+        print("error: --tle-fixture and --tle-fixture-dir are mutually exclusive",
+              file=sys.stderr)
+        return 2
+
+    if args.tle_fixture_dir is not None:
+        from ..orbital import CONSTELLATIONS, build_satellites_from_fixture_dir
+        satellites = build_satellites_from_fixture_dir(
+            args.tle_fixture_dir, list(CONSTELLATIONS), DEFAULT_T0,
+        )
+        if not satellites:
+            print(f"error: no satellites found under {args.tle_fixture_dir}",
+                  file=sys.stderr)
+            return 2
+        scenario = build_full_scenario_offline(
+            satellites,
+            seed=args.seed,
+            duration_hours=args.duration,
+            mechanism=args.mechanism,
+            constellations=list(CONSTELLATIONS),
+            min_elevation_deg=args.min_elevation,
+        )
+    elif args.tle_fixture is not None:
         try:
             constellation = by_id(args.fixture_constellation)
         except KeyError as e:

@@ -54,7 +54,7 @@ packages = [
 ]
 
 [tool.setuptools.package-data]
-"raveneye.viewer" = ["template.html"]
+"raveneye.viewer" = ["template.html", "globe/*.html", "globe/*.js", "globe/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

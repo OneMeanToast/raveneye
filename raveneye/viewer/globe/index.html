@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RavenEye — Watch Floor (Globe)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.122.0/Build/Cesium/Widgets/widgets.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand"><span class="dot">&#9679;</span>RAVENEYE</div>
+      <div class="scenario" id="scenario-name">&mdash;</div>
+      <div class="phase-badge" id="phase-badge">&mdash;</div>
+      <div class="clock" id="clock">&mdash;</div>
+    </header>
+
+    <main>
+      <div id="cesiumContainer"></div>
+    </main>
+
+    <aside>
+      <section class="aside-block">
+        <div class="panel-head">
+          <span>Stats</span>
+          <span class="count" id="stats-tagline">v0.2</span>
+        </div>
+        <div id="stats-body" class="stats-body"></div>
+      </section>
+
+      <section class="aside-block">
+        <div class="panel-head">
+          <span>Constellations</span>
+          <span class="count" id="constellation-count"></span>
+        </div>
+        <div id="constellation-filter"></div>
+      </section>
+
+      <section class="aside-block selection-block">
+        <div class="panel-head">
+          <span id="selection-title">Selection</span>
+          <span class="count" id="selection-meta"></span>
+        </div>
+        <div id="selection-body" class="selection-body">
+          <div class="empty">
+            Click a satellite or event marker to inspect. Hover for a quick tooltip.
+          </div>
+        </div>
+      </section>
+
+      <section class="aside-block feed-block">
+        <div class="panel-head">
+          <span>Event Feed</span>
+          <span class="count" id="feed-count"></span>
+        </div>
+        <div id="event-feed"></div>
+      </section>
+    </aside>
+
+    <div id="timeline">
+      <svg id="timeline-svg" preserveAspectRatio="none"></svg>
+    </div>
+
+    <footer>
+      <button id="btn-play" title="Play / Pause (Space)">&#9658; PLAY</button>
+      <button id="btn-reset" title="Reset (R)">&#9632; RESET</button>
+      <div class="speeds" id="speeds">
+        <button data-speed="60">60&times;</button>
+        <button data-speed="300">300&times;</button>
+        <button data-speed="1800" class="active">1800&times;</button>
+        <button data-speed="3600">3600&times;</button>
+      </div>
+      <div class="hint">
+        <kbd>Space</kbd> play &nbsp; <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> &plusmn;1h &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> follow sat
+      </div>
+    </footer>
+  </div>
+
+  <div id="error-box" class="hidden">
+    <div class="ebody">
+      <h2>Could not load scenario.json</h2>
+      <p id="err-detail"></p>
+      <p>The viewer is a static page that loads <code>scenario.json</code> via <code>fetch()</code>. Browsers block this on <code>file://</code>; serve the directory:</p>
+      <p><code>python3 -m http.server</code></p>
+      <p>then open <code>http://localhost:8000/</code>.</p>
+      <p>Override URL with <code>?scenario=path/to/scenario.json</code> or set <code>window.RAVENEYE_SCENARIO_URL</code>.</p>
+    </div>
+  </div>
+
+  <!-- Globe runtime: Cesium + satellite.js + RavenEye modules. Order matters. -->
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.122.0/Build/Cesium/Cesium.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+  <script src="orbits.js"></script>
+  <script src="ground.js"></script>
+  <script src="panels.js"></script>
+  <script src="timeline.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -64,6 +64,11 @@ def _parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
         "--stats", action="store_true",
         help="Print summary stats to stderr.",
     )
+    p.add_argument(
+        "--legacy-flat-map", action="store_true",
+        help="When --viewer is set, stage the v0.1 flat map instead of the "
+             "v0.2 globe viewer (default).",
+    )
     return p.parse_args(argv)
 
 
@@ -156,17 +161,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
 
     if args.viewer is not None:
-        # The globe viewer arrives in the next v0.2 chunk; for now we stage
-        # the v0.1 flat-map viewer with the scenario JSON. scenario.json is
-        # a superset of sim.json (events + bids carry through unchanged), so
-        # the flat viewer renders it correctly — it just doesn't yet show the
-        # supply / allocation overlays.
         from ..viewer.build_viewer import stage_viewer
 
-        # stage_viewer writes scenario.json under the legacy "sim.json" name
-        # so the unmodified v0.1 template fetches it.
-        out_dir = stage_viewer(args.viewer, scenario)
-        print(f"staged viewer at {out_dir} (open index.html via `python3 -m http.server`)")
+        kind = "flat" if args.legacy_flat_map else "globe"
+        out_dir = stage_viewer(args.viewer, scenario, kind=kind)
+        print(
+            f"staged {kind} viewer at {out_dir} "
+            f"(open index.html via `python3 -m http.server`)"
+        )
 
     if args.stats:
         _print_stats(scenario)

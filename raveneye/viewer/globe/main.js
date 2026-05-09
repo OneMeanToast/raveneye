@@ -207,6 +207,7 @@
       const satLayer = global.RavenEyeOrbits.addSatellites(scenario, viewer);
       const locationEntities = global.RavenEyeGround.addLocations(scenario, viewer);
       const eventEntities = global.RavenEyeGround.addEventPulses(scenario, viewer);
+      const coverageLayer = global.RavenEyeCoverage.addCoverage(scenario, viewer, satLayer);
 
       window.RavenEyeState = {
         viewer: viewer,
@@ -214,12 +215,13 @@
         satLayer: satLayer,
         eventEntities: eventEntities,
         locationEntities: locationEntities,
+        coverageLayer: coverageLayer,
         selectedSatId: null,
       };
 
       global.RavenEyePanels.render(scenario, viewer, satLayer, {
         eventEntities, locationEntities, t0_iso: scenario.meta.t0_iso,
-      });
+      }, coverageLayer);
       const tl = global.RavenEyeTimeline.render(scenario, viewer, {
         onEventClick: (ev) => global.RavenEyePanels.selectEvent(ev, scenario, viewer, eventEntities),
       });

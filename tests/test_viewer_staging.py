@@ -38,8 +38,9 @@ def test_stage_globe_writes_full_directory(tmp_path, scenario_24h):
     out = stage_viewer(tmp_path / "globe_out", scenario_24h, kind="globe")
     assert (out / "index.html").is_file()
     assert (out / "scenario.json").is_file()
-    # All chunk-6 globe modules should land
-    for fname in ("style.css", "main.js", "orbits.js", "ground.js", "panels.js", "timeline.js"):
+    # All globe modules should land (skeleton + coverage)
+    for fname in ("style.css", "main.js", "orbits.js", "ground.js",
+                  "coverage.js", "panels.js", "timeline.js"):
         assert (out / fname).is_file(), f"missing {fname} in staged globe viewer"
     parsed = json.loads((out / "scenario.json").read_text(encoding="utf-8"))
     assert parsed["meta"]["n_satellites"] == 5

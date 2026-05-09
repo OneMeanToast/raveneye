@@ -14,6 +14,10 @@
   <div id="app">
     <header>
       <div class="brand"><span class="dot">&#9679;</span>RAVENEYE</div>
+      <div class="header-tabs" role="tablist">
+        <button id="tab-globe" class="header-tab active" role="tab" aria-selected="true">GLOBE</button>
+        <button id="tab-board" class="header-tab" role="tab" aria-selected="false">BOARD</button>
+      </div>
       <div class="scenario" id="scenario-name">&mdash;</div>
       <div class="phase-badge" id="phase-badge">&mdash;</div>
       <div class="clock" id="clock">&mdash;</div>
@@ -21,6 +25,33 @@
 
     <main>
       <div id="cesiumContainer"></div>
+
+      <div id="board-overlay">
+        <section class="board-section gantt-section">
+          <div class="board-section-head">
+            <span>Gantt &mdash; per-target image delivery schedule</span>
+            <span class="board-legend">
+              <span class="lg lg-collecting">collecting</span>
+              <span class="lg lg-processing">processing</span>
+              <span class="lg lg-intransit">in transit</span>
+              <span class="lg lg-delivered">delivered</span>
+              <span class="lg lg-deadline">deadline missed</span>
+              <span class="lg lg-failed">proc. failed</span>
+            </span>
+          </div>
+          <div class="gantt-scroll">
+            <svg id="gantt-svg" preserveAspectRatio="xMinYMin meet"></svg>
+          </div>
+        </section>
+
+        <section class="board-section kanban-section">
+          <div class="board-section-head">
+            <span>Kanban &mdash; tasking flow at the playback clock</span>
+            <span class="board-hint">cards advance as the sim time progresses · sorted by priority</span>
+          </div>
+          <div id="kanban-body" class="kanban-body"></div>
+        </section>
+      </div>
     </main>
 
     <aside>
@@ -99,6 +130,7 @@
   <script src="coverage.js"></script>
   <script src="panels.js"></script>
   <script src="timeline.js"></script>
+  <script src="board.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

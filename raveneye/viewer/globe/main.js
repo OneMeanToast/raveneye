@@ -177,6 +177,26 @@
     refreshPlayBtn();
   }
 
+  // ----- Header GLOBE / BOARD tab toggle -----
+  function wireTabs(viewer, board) {
+    const tGlobe = document.getElementById("tab-globe");
+    const tBoard = document.getElementById("tab-board");
+    if (!tGlobe || !tBoard) return;
+
+    function showGlobe() {
+      tGlobe.classList.add("active"); tGlobe.setAttribute("aria-selected", "true");
+      tBoard.classList.remove("active"); tBoard.setAttribute("aria-selected", "false");
+      if (board) board.hide();
+    }
+    function showBoard() {
+      tBoard.classList.add("active"); tBoard.setAttribute("aria-selected", "true");
+      tGlobe.classList.remove("active"); tGlobe.setAttribute("aria-selected", "false");
+      if (board) board.show();
+    }
+    tGlobe.addEventListener("click", showGlobe);
+    tBoard.addEventListener("click", showBoard);
+  }
+
   // ----- Click handler — surface satellite/event/location selection -----
   function wireSelection(viewer, scenario, eventEntities, locationEntities, satLayer) {
     const Cesium = global.Cesium;
@@ -240,6 +260,8 @@
 
       wireControls(viewer);
       wireSelection(viewer, scenario, eventEntities, locationEntities, satLayer);
+      const board = global.RavenEyeBoard ? global.RavenEyeBoard.init(scenario, viewer) : null;
+      wireTabs(viewer, board);
 
       // Clock-driven UI updates: header clock, timeline playhead.
       viewer.clock.onTick.addEventListener(() => {

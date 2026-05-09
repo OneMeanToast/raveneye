@@ -38,10 +38,17 @@ def test_stage_globe_writes_full_directory(tmp_path, scenario_24h):
     out = stage_viewer(tmp_path / "globe_out", scenario_24h, kind="globe")
     assert (out / "index.html").is_file()
     assert (out / "scenario.json").is_file()
-    # All globe modules should land (skeleton + coverage)
+    # All globe modules should land (skeleton + coverage + board)
     for fname in ("style.css", "main.js", "orbits.js", "ground.js",
-                  "coverage.js", "panels.js", "timeline.js"):
+                  "coverage.js", "panels.js", "timeline.js", "board.js"):
         assert (out / fname).is_file(), f"missing {fname} in staged globe viewer"
+    # The board overlay markup must be present in index.html
+    html = (out / "index.html").read_text(encoding="utf-8")
+    assert "tab-board" in html
+    assert "tab-globe" in html
+    assert "board-overlay" in html
+    assert "gantt-svg" in html
+    assert "kanban-body" in html
     parsed = json.loads((out / "scenario.json").read_text(encoding="utf-8"))
     assert parsed["meta"]["n_satellites"] == 5
     html = (out / "index.html").read_text(encoding="utf-8")

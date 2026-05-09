@@ -38,12 +38,19 @@ def test_stage_globe_writes_full_directory(tmp_path, scenario_24h):
     out = stage_viewer(tmp_path / "globe_out", scenario_24h, kind="globe")
     assert (out / "index.html").is_file()
     assert (out / "scenario.json").is_file()
-    # All globe modules should land (skeleton + coverage + explainer)
+    # All globe modules should land (skeleton + coverage + board + explainer)
     for fname in ("style.css", "main.js", "orbits.js", "ground.js",
-                  "coverage.js", "panels.js", "timeline.js", "explainer.js"):
+                  "coverage.js", "panels.js", "timeline.js",
+                  "board.js", "explainer.js"):
         assert (out / fname).is_file(), f"missing {fname} in staged globe viewer"
-    # The header should reference the explainer toggle
+    # Both feature sets must be present in index.html: BOARD/GLOBE tabs +
+    # gantt + kanban markup, plus the RTB explainer toggle and panel.
     html = (out / "index.html").read_text(encoding="utf-8")
+    assert "tab-board" in html
+    assert "tab-globe" in html
+    assert "board-overlay" in html
+    assert "gantt-svg" in html
+    assert "kanban-body" in html
     assert "btn-explainer" in html
     assert "explainer-panel" in html
     parsed = json.loads((out / "scenario.json").read_text(encoding="utf-8"))

@@ -240,6 +240,7 @@
 
       wireControls(viewer);
       wireSelection(viewer, scenario, eventEntities, locationEntities, satLayer);
+      if (global.RavenEyeExplainer) global.RavenEyeExplainer.init(scenario);
 
       // Clock-driven UI updates: header clock, timeline playhead.
       viewer.clock.onTick.addEventListener(() => {

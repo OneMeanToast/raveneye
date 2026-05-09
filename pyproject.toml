@@ -21,7 +21,12 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
 ]
-dependencies = []
+dependencies = [
+    "skyfield>=1.49",
+    "sgp4>=2.23",
+    "requests>=2.31",
+    "numpy>=1.26",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -41,6 +46,7 @@ packages = [
     "raveneye",
     "raveneye.cli",
     "raveneye.sim",
+    "raveneye.orbital",
     "raveneye.viewer",
 ]
 
